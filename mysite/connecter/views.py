@@ -40,15 +40,16 @@ def get_fb(request):
             <head>\
             <title>Connecter</title>\
             </head>\
-                    <body>\
-                    <ul>'
+            <body>\
+            <ul>'
     for fr in frdata:
         nml = strnorm(fr['last_name'])
         nmf = strnorm(fr['first_name'])
         if nml.find(qs) > -1  or nmf.find(qs) > -1:
             output += '<li><a href="show_fr?id=' + fr['id'] + '">' + fr['last_name'] + ', ' + fr['first_name'] + '<a></li>'
    
-    output += '</ul></body>\
-                    </html>';
+    output += '</ul>\
+            </body>\
+            </html>';
 
     return HttpResponse(output);
