@@ -4,10 +4,9 @@ import urllib.request
 import json
 import unidecode
 
-# Create your views here.
-
 users = {'1':'Szilard','2':'Mariann','3':'Albert'}
-token = 'EAACEdEose0cBAL8yP4pFJy8zPzwhNlAr65CqKqSd1nbZAiwCtZCvqRME1AV9ZA7aZAMLao4Yp4Xvb8prVs3QqZCewnkBukfgrAsWrzMVti8YWG4B4OoQVTwHnzNZCUXgjHn7WUROpW6ZACmy9PuDAyDvpYSt7DbLVJbGCNKGnKZAY7A1w2PZBDNERqZA4ZAuNLuZCEZC2eI3PPZBrJlAZDZD'
+token = 'EAACEdEose0cBAPwU0tqUq9KyrxOC6gZBxXaa5ZAQUQ2apVdzTfhElxDuGdELEel4cTsbVscKugNq89l2Iicmy5T1lxZCBzAqfzj1mZBZBNLZAe0Dvv6kcLJ5ad6T86BtVYGy0JD22Xko6GJ0UAOQ406ivFw4ZBMIjvHag4XojFZAwWEtfy2a7ibygEyCt4LatLvbeItuLVU89QZDZD'
+path = "/connecter/"
 
 def strnorm(inname):
     outname = unidecode.unidecode(inname.lower())
@@ -38,7 +37,6 @@ def pageheader():
                     -webkit-transition: width 0.4s ease-in-out;\n\
                     transition: width 0.4s ease-in-out;\n\
                 }\n\
-    \n\
                 input[type=text]:focus {\n\
                     width: 100%;\n\
                 }\n\
@@ -46,6 +44,12 @@ def pageheader():
         </head>\n\
         <body class="w3-content" style="max-width:1300px">\n'
     return output
+
+
+def pagetop():
+    output = '<a href="' + path + '">Home Page</a>'
+    return output
+
 
 def pagefooter():
     output = '<footer>\n\
@@ -55,7 +59,9 @@ def pagefooter():
     </html>\n';
     return output
 
+
 def index(request):
+    error = request.GET.get("error")
     output = pageheader()
     output += '<div class="w3-row">\n\
                   <div class="w3-blue-grey w3-container w3-center" style="height:1080px">\n\
@@ -64,11 +70,12 @@ def index(request):
                          <img src="Logo_Design.jpg"  style="width:50%">\n\
                     </div>\n\
                     <div class="w3-padding-64">\n\
-                      <p>Welcome to Connecter, the website for all your prospective employee research needs.</p>\n\
-                        <p>Please enter the name of the prospective employee you would like to learn more about.</p>\n\
-                        <form>\n\
-                             <form action="/Main Page.py" method="post">\n\
-                             <input type="text" name="search" placeholder="Search..">\n\
+                      <p>Welcome to Connecter, the website for all your prospective employee research needs.</p>\n'
+    if error == "emptystring":
+        output += '<p style="color: red">No name was input to the field, please try again</p>\n'
+    output += '<p>Please enter the name of the prospective employee you would like to learn more about.</p>\n\
+                        <form action="list_of_names" method="GET">\n\
+                             <input type="text" name="search" placeholder="Search..." requried maxlength=30 >\n\
                             </form>\n\
                         </form>\n\
                     </div>\n\
@@ -77,39 +84,83 @@ def index(request):
     output += pagefooter()
     return HttpResponse(output)
 
+
 def list_of_names(request):
-    output = pageheader()
-    output += pagefooter()
-    return HttpResponse(output)
+    search_exp = request.GET.get('search')
 
-def results(request):
-    output = pageheader()
-    output += pagefooter()
-    return HttpResponse(output)
-    """qs = 'o'
+    if not search_exp:
+        #In case of empty search string, redirect to index page
+        output = '\
+            <!DOCTYPE html>\n\
+            <html lang="en">\n\
+                <head>\n\
+                    <meta http-equiv="refresh" content="0; URL=' + request.scheme + '://' + request.META.get('HTTP_HOST') + path +'?error=emptystring" />\n\
+                </head>\n\
+            </html>'
+        return HttpResponse(output)
 
-    fbresp_str = urllib.request.urlopen('https://graph.facebook.com/v2.11/me?fields=id%2Cname%2Cfriends%7Bfirst_name%2Clast_name%2Cid%7D&access_token=' + token).read()
+    #Main search logic starts here
+    search_exp = search_exp[:30]
+    search_words = search_exp.split()
+    normal_search_words = [(strnorm(word)) for word in search_words]
+    fbresp_str = urllib.request.urlopen(
+        'https://graph.facebook.com/v2.11/me?fields=id%2Cname%2Cfriends%7Bfirst_name%2Clast_name%2Cid%7D&access_token=' + token).read()
     fbresp = json.loads(fbresp_str.decode('utf-8'))
     friends = fbresp['friends']
     frdata = friends['data']
-    output = '<html>\
-            <head>\
-            <title>Connecter</title>\
-            </head>\
-            <body>\
-            <ul>'
+    results = ''
     for fr in frdata:
         nml = strnorm(fr['last_name'])
         nmf = strnorm(fr['first_name'])
-        if nml.find(qs) > -1  or nmf.find(qs) > -1:
-            output += '<li><a href="show_fr?id=' + fr['id'] + '">' + fr['last_name'] + ', ' + fr['first_name'] + '<a></li>'
-   
-    output += '</ul>\
-            </body>\
-            </html>';
+        matched = False
+        for qs in normal_search_words:
+            if nml.find(qs) > -1 or nmf.find(qs) > -1:
+                matched = True
+        if matched:
+            results += '<a href="show_fr?id=' + fr['id'] + '">' + fr['last_name'] + ', ' + fr['first_name'] + '<a><br>'
+    #TODO Implement search restriction bar if list is longer than 20 elements
+    #Genetaring output
+    output = pageheader() + pagetop()
+    output +=   '<div class="w3-row">\n\
+                    <div class="w3-black w3-container w3-center" style="height:1080px">\n\
+                        <div class="w3-padding-64">\n\
+                            <h1>You Searched For "' + search_exp + '"</h1>\n\
+                        </div>\n\
+                        <div class="w3-padding-64">\
+                            <p>Please Choose The User You Meant</p>\n' +\
+                         results +\
+                        '</div>\n\
+                    </div>\n\
+                </div>'
+    output += pagefooter()
+    return HttpResponse(output)
 
-    return HttpResponse(output);"""
 
-    """for id,name in users.items():
-        output += '<li><a href="show_user?id=' + id + '">' + name + '</a></li>'
-    return HttpResponse(output)"""
+def results(request):
+    output = pageheader()
+    output += '<div class="w3-row">\n\
+                    <div class="w3-half w3-black w3-container w3-center" style="height:1080px">\n\
+                        <div class="w3-padding-64">\n\
+                            <h1>Name of Person</h1>\n\
+                        </div>\n\
+                        <div class="w3-padding-64">\n\
+                            <p>Personal Bio</p>\n\
+                            <p>Age</p>\n\
+                            <p>Nationality</p>\n\
+                            <p>Work/Education</p>\n\
+                            <a href="#" class="w3-button w3-black w3-block w3-hover-blue-grey w3-padding-16">Friends</a>\n\
+                        </div>\n\
+                    </div>\n\
+                    <div class="w3-half w3-blue-grey w3-container" style="height:1080px">\n\
+                        <div class="w3-padding-64 w3-center">\n\
+                            <h1>Placeholder</h1>\n\
+                            <img src="Image Placeholder.jpg"  style="width:50%">\n\
+                                <div class="w3-left-align w3-padding-large">\n\
+                                    <p>Lorem ipusm sed vitae justo condimentum, porta lectus vitae, ultricies congue gravida diam non fringilla.</p>\n\
+                                    <p>Lorem ipusm sed vitae justo condimentum, porta lectus vitae, ultricies congue gravida diam non fringilla.</p>\n\
+                                </div>\n\
+                            </div>\n\
+                        </div>\n\
+                    </div>'
+    output += pagefooter()
+    return HttpResponse(output)
