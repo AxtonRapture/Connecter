@@ -5,12 +5,15 @@ import json
 import unidecode
 
 users = {'1':'Szilard','2':'Mariann','3':'Albert'}
-token = 'EAACEdEose0cBAPwU0tqUq9KyrxOC6gZBxXaa5ZAQUQ2apVdzTfhElxDuGdELEel4cTsbVscKugNq89l2Iicmy5T1lxZCBzAqfzj1mZBZBNLZAe0Dvv6kcLJ5ad6T86BtVYGy0JD22Xko6GJ0UAOQ406ivFw4ZBMIjvHag4XojFZAwWEtfy2a7ibygEyCt4LatLvbeItuLVU89QZDZD'
+token = 'EAACEdEose0cBAL8JaHXzTWZB0113D6vw7ap1Da9S35JSaneqiYiFE4U8h8bZCrVzkwH0C4SiMj5a3gUPPvD4oQ9bSkNlY0wqfAczTtJGYcdl5GJNKoZARsGue5GGxZCUBAv5cxTm4ZBR183260ybwEwLFoRIa9GW45guFg8FqcxRGdhG2Txm6fZAtACgWa8w6ZBbXN8NUp4QAZDZD'
 path = "/connecter/"
 
 def strnorm(inname):
     outname = unidecode.unidecode(inname.lower())
     return outname
+
+def errormsg(msg):
+    return '<p style="color: red">' + msg +'</p>\n'
 
 def pageheader():
     output = '\
@@ -72,7 +75,7 @@ def index(request):
                     <div class="w3-padding-64">\n\
                       <p>Welcome to Connecter, the website for all your prospective employee research needs.</p>\n'
     if error == "emptystring":
-        output += '<p style="color: red">No name was input to the field, please try again</p>\n'
+        output += errormsg('No name was input to the field, please try again')
     output += '<p>Please enter the name of the prospective employee you would like to learn more about.</p>\n\
                         <form action="list_of_names" method="GET">\n\
                              <input type="text" name="search" placeholder="Search..." requried maxlength=30 >\n\
@@ -86,6 +89,8 @@ def index(request):
 
 
 def list_of_names(request):
+    restriction = ''
+    result_num = 0
     search_exp = request.GET.get('search')
 
     if not search_exp:
@@ -106,8 +111,7 @@ def list_of_names(request):
     fbresp_str = urllib.request.urlopen(
         'https://graph.facebook.com/v2.11/me?fields=id%2Cname%2Cfriends%7Bfirst_name%2Clast_name%2Cid%7D&access_token=' + token).read()
     fbresp = json.loads(fbresp_str.decode('utf-8'))
-    friends = fbresp['friends']
-    frdata = friends['data']
+    frdata = fbresp['friends']['data']
     results = ''
     for fr in frdata:
         nml = strnorm(fr['last_name'])
@@ -117,15 +121,20 @@ def list_of_names(request):
             if nml.find(qs) > -1 or nmf.find(qs) > -1:
                 matched = True
         if matched:
-            results += '<a href="show_fr?id=' + fr['id'] + '">' + fr['last_name'] + ', ' + fr['first_name'] + '<a><br>'
-    #TODO Implement search restriction bar if list is longer than 20 elements
+            results += '<a href="results?id=' + fr['id'] + '">' + fr['last_name'] + ', ' + fr['first_name'] + '<a><br>'
+            result_num += 1
+
     #Genetaring output
     output = pageheader() + pagetop()
+    if result_num > 20:
+        restriction = '<form action="list_of_names" method="GET">\n\
+                             <input type="text" name="search" placeholder="Restrict search..." requried maxlength=30 value="' + search_exp + '" >\n'
     output +=   '<div class="w3-row">\n\
                     <div class="w3-black w3-container w3-center" style="height:1080px">\n\
                         <div class="w3-padding-64">\n\
-                            <h1>You Searched For "' + search_exp + '"</h1>\n\
-                        </div>\n\
+                            <h1>You Searched For "' + search_exp + '"</h1>\n' +\
+                            restriction +\
+                        '</div>\n\
                         <div class="w3-padding-64">\
                             <p>Please Choose The User You Meant</p>\n' +\
                          results +\
@@ -137,6 +146,29 @@ def list_of_names(request):
 
 
 def results(request):
+    work = "this failed"
+    user_id = request.GET.get('id')
+
+    if not user_id:
+        output = page_header() + page_footer()
+        output += errormsg('No user id was recieved, search again')
+        return HttpResponse(output)
+
+    fbresp_str = urllib.request.urlopen('https://graph.facebook.com/v2.11/'+ user_id +'?fields=birthday%2Ceducation%2Cemail%2Cwork%2Cabout%2Cfriends%2Clocation&access_token=' + token).read()
+    fbresp = json.loads(fbresp_str.decode('utf-8'))
+    #TODO find out how about is stored
+    #about = fbresp['about']
+    #TODO Find age of user
+    #age = fbresp['about']
+    location = fbresp['location']['name']
+    for job in fbresp['work']:
+        if job == "employer":
+            work += job['name']
+    frdata = fbresp['friends']['data']
+    results = ''
+    for fr in frdata:
+            results += '<a style= "text-decoration:none;" href="results?id=' + fr['id'] + '">' + fr['name'] + ', ' + '<a><br>'
+
     output = pageheader()
     output += '<div class="w3-row">\n\
                     <div class="w3-half w3-black w3-container w3-center" style="height:1080px">\n\
@@ -144,12 +176,15 @@ def results(request):
                             <h1>Name of Person</h1>\n\
                         </div>\n\
                         <div class="w3-padding-64">\n\
-                            <p>Personal Bio</p>\n\
-                            <p>Age</p>\n\
-                            <p>Nationality</p>\n\
-                            <p>Work/Education</p>\n\
-                            <a href="#" class="w3-button w3-black w3-block w3-hover-blue-grey w3-padding-16">Friends</a>\n\
-                        </div>\n\
+                            <p><u>Personal Bio</u></p>\n\
+                            <p><u>Age</u></p>\n\
+                            <p><u>Location</u></p>\n' +\
+                            location +\
+                            '<p><u>Work/Education</u></p>\n' +\
+                            work +\
+                            '<p><u>Friends</u></p>\n'+\
+                            results +\
+                        '</div>\n\
                     </div>\n\
                     <div class="w3-half w3-blue-grey w3-container" style="height:1080px">\n\
                         <div class="w3-padding-64 w3-center">\n\
