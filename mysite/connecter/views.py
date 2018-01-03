@@ -3,9 +3,11 @@ from django.http import HttpResponse
 import urllib.request
 import json
 import unidecode
+import datetime
+from math import floor
 
 users = {'1':'Szilard','2':'Mariann','3':'Albert'}
-token = 'EAACEdEose0cBAL8JaHXzTWZB0113D6vw7ap1Da9S35JSaneqiYiFE4U8h8bZCrVzkwH0C4SiMj5a3gUPPvD4oQ9bSkNlY0wqfAczTtJGYcdl5GJNKoZARsGue5GGxZCUBAv5cxTm4ZBR183260ybwEwLFoRIa9GW45guFg8FqcxRGdhG2Txm6fZAtACgWa8w6ZBbXN8NUp4QAZDZD'
+token = 'EAACEdEose0cBAI0mqrhGqV8PuXv39oc0DBBsOo3A9n6I88EzjdQGEL32JcRsV27pgSLxx4ZBPWdj3dQH8tITxcUfMLktDaXw3tYwV16S5M4AC5mzaEPXv9c0bxdePoswUco9ohbZCtbeMTubnKtKgVFZCkfVv3K65Rxb4yi9vEdtitjZCZBmUhQXP25Dyu93zD56xJLlSgAZDZD'
 path = "/connecter/"
 
 def strnorm(inname):
@@ -45,7 +47,8 @@ def pageheader():
                 }\n\
             </style>\n\
         </head>\n\
-        <body class="w3-content" style="max-width:1300px">\n'
+        <body class="w3-content" style="max-width:1300px">'
+
     return output
 
 
@@ -108,8 +111,7 @@ def list_of_names(request):
     search_exp = search_exp[:30]
     search_words = search_exp.split()
     normal_search_words = [(strnorm(word)) for word in search_words]
-    fbresp_str = urllib.request.urlopen(
-        'https://graph.facebook.com/v2.11/me?fields=id%2Cname%2Cfriends%7Bfirst_name%2Clast_name%2Cid%7D&access_token=' + token).read()
+    fbresp_str = urllib.request.urlopen('https://graph.facebook.com/v2.11/me?fields=id%2Cname%2Cfriends%7Bfirst_name%2Clast_name%2Cid%7D&access_token=' + token).read()
     fbresp = json.loads(fbresp_str.decode('utf-8'))
     frdata = fbresp['friends']['data']
     results = ''
@@ -146,7 +148,10 @@ def list_of_names(request):
 
 
 def results(request):
-    work = "this failed"
+    now = datetime.datetime.now()
+    work = " "
+    education = " "
+    location = "N/A"
     user_id = request.GET.get('id')
 
     if not user_id:
@@ -156,46 +161,64 @@ def results(request):
 
     fbresp_str = urllib.request.urlopen('https://graph.facebook.com/v2.11/'+ user_id +'?fields=birthday%2Ceducation%2Cemail%2Cwork%2Cabout%2Cfriends%2Clocation&access_token=' + token).read()
     fbresp = json.loads(fbresp_str.decode('utf-8'))
+
+
+    if location in fbresp:
+        location = fbresp['location']['name']
+
+
     #TODO find out how about is stored
     #about = fbresp['about']
     #TODO Find age of user
-    #age = fbresp['about']
-    location = fbresp['location']['name']
+    dob = fbresp['birthday']
+    dob = datetime.datetime.strptime(datetime.datetime.strptime(dob, '%m/%d/%Y').strftime('%Y/%m/%d'), '%Y/%m/%d')
+    age = str(floor(((now - dob).days)/365))
     for job in fbresp['work']:
-        if job == "employer":
-            work += job['name']
+        employer = job['employer']
+        job_location = job['location']
+        if employer:
+            work += employer['name']
+            if job_location:
+                work += ' (' + job_location['name'] + ')'
+            work += '<br>'
+    for edu in fbresp['education']:
+        school = edu['school']
+        if school:
+            education += school['name'] + '<br>'
     frdata = fbresp['friends']['data']
     results = ''
     for fr in frdata:
-            results += '<a style= "text-decoration:none;" href="results?id=' + fr['id'] + '">' + fr['name'] + ', ' + '<a><br>'
+            results += '<a href="results?id=' + fr['id'] + '">' + fr['name'] + ', ' + '<a><br>'
 
-    output = pageheader()
-    output += '<div class="w3-row">\n\
-                    <div class="w3-half w3-black w3-container w3-center" style="height:1080px">\n\
+    output = pageheader() + pagetop()
+    output += '<table width=1300 style="border-spacing: 0px;"><tr>\n\
+                    <td align="center" valign="top" style="background-color:black; color:white">\n\
                         <div class="w3-padding-64">\n\
                             <h1>Name of Person</h1>\n\
                         </div>\n\
                         <div class="w3-padding-64">\n\
-                            <p><u>Personal Bio</u></p>\n\
-                            <p><u>Age</u></p>\n\
-                            <p><u>Location</u></p>\n' +\
+                            <p><b>Age</b></p>\n' +\
+                            age +\
+                            '<p><b>Location</b></p>\n' +\
                             location +\
-                            '<p><u>Work/Education</u></p>\n' +\
-                            work +\
-                            '<p><u>Friends</u></p>\n'+\
+                            '<p><b>Work</b></p>\n' +\
+                            work + \
+                            '<p><b>Education</b></p>\n' + \
+                            education + \
+                            '<p><b>Friends</b></p>\n'+\
                             results +\
                         '</div>\n\
-                    </div>\n\
-                    <div class="w3-half w3-blue-grey w3-container" style="height:1080px">\n\
+                    </td>\n\
+                    <td align="center" valign="top" style="background-color:#607d8b; color:white">\n\
                         <div class="w3-padding-64 w3-center">\n\
                             <h1>Placeholder</h1>\n\
                             <img src="Image Placeholder.jpg"  style="width:50%">\n\
-                                <div class="w3-left-align w3-padding-large">\n\
-                                    <p>Lorem ipusm sed vitae justo condimentum, porta lectus vitae, ultricies congue gravida diam non fringilla.</p>\n\
-                                    <p>Lorem ipusm sed vitae justo condimentum, porta lectus vitae, ultricies congue gravida diam non fringilla.</p>\n\
-                                </div>\n\
+                            <div class="w3-left-align w3-padding-large">\n\
+                                <p>Lorem ipusm sed vitae justo condimentum, porta lectus vitae, ultricies congue gravida diam non fringilla.</p>\n\
+                                <p>Lorem ipusm sed vitae justo condimentum, porta lectus vitae, ultricies congue gravida diam non fringilla.</p>\n\
                             </div>\n\
                         </div>\n\
-                    </div>'
+                    </td>\n\
+                </tr></table>'
     output += pagefooter()
     return HttpResponse(output)
