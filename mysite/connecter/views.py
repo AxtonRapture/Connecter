@@ -6,13 +6,29 @@ import unidecode
 import datetime
 from math import floor
 
-users = {'1':'Szilard','2':'Mariann','3':'Albert'}
-token = 'EAACEdEose0cBAG52ZAkROZAhO6cJmrYSYubpvVSjtTm40EDenE1iA0wec0kxFRZA81YLnHfc8PaeMsV1M68loxslRZBGVqC6cPpBCZClMgwRwqJWfWeJvOpb0VMuebpdHRzKxZBX29ZCeINHDODT6kGmYgKyGWIIZBH1E28eMpcf5SpLsIQQK5sl50ILzLmTfcnoBU9aFkboKQZDZD'
+token = 'EAACEdEose0cBAO1W9oujl1ZBZCPnnYthqd2O0Q6wdLObeiYPSpgLZC9Pb9nCqTPqgZCT8uU2ejbQ2zDYN6ZCbDhJbf7ZBZAxlSYTLJiICU1wKZBHH5gBGQ1srZC444pIdo8GmnZBVlzU8hsbcZCMsVu1Td3kxPy3rNj2ZCT0UySZAZB34Os23C3W50i8NdJmfZAbLPe8kOiadQ5vAYZB0wZDZD'
 path = "/connecter/"
 
 def strnorm(inname):
     outname = unidecode.unidecode(inname.lower())
     return outname
+
+def getnum(reqget, agebound):
+    if agebound in reqget:
+        numtemp = reqget.get(agebound)
+        if numtemp:
+            try:
+                agenum = int(numtemp)
+                return agenum
+            except TypeError:
+                return None
+        return None
+
+def getage(indob):
+    now = datetime.datetime.now()
+    dob = datetime.datetime.strptime(datetime.datetime.strptime(indob, '%m/%d/%Y').strftime('%Y/%m/%d'), '%Y/%m/%d')
+    age = floor(((now - dob).days) / 365)
+    return age
 
 def errormsg(msg):
     return '<p style="color: red">' + msg +'</p>\n'
@@ -24,7 +40,7 @@ def pageheader():
         <head>\n\
             <link href="https://fonts.googleapis.com/css?family=Raleway|Roboto+Condensed|Ubuntu" rel="stylesheet">\n\
             <meta charset="UTF-8">\n\
-            <link rel="shortcut icon" href="https://lh4.googleusercontent.com/I_ymSvUYuvWh-rROSsaoRY6NVdL8oCW0F9v_u-2fprB7Z7UPkzM1SalwaP5QTNP4HR4qy1346rMBhSt6m3TX=w1920-h949" type="image/x-icon">\n\
+            <link rel="shortcut icon" href="https://s3.eu-west-2.amazonaws.com/connecter/Favicon.ico" type="image/x-icon">\n\
             <meta name="viewport" content="width=device-width, initial-scale=1">\n\
             <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">\n\
             <title>Connecter</title>\n\
@@ -50,6 +66,10 @@ def pageheader():
                     font-family: Raleway,sans-serif; \n\
                     font-weight: bold;\n\
                     font-size: 110%;\n\
+                }\n\
+                table.center{\n\
+                    margin-left:auto; \n\
+                    margin-right:auto; \n\
                 }\n\
             </style>\n\
         </head>\n\
@@ -79,7 +99,7 @@ def index(request):
                   <div class="w3-blue-grey w3-container w3-center" style="height:1080px">\n\
                     <div class="w3-padding-64">\n\
                       <h1>Connecter</h1>\n\
-                         <img src="https://lh5.googleusercontent.com/VF_Wpri-watJ1sOLLIrVG2u2jScpNOLi7rrClE1OCSaRuvWjI2XfzLviO_fWmOrL-78O7M410bAdN-PPUfal=w1920-h949-rw" style="width:50%">\n\
+                         <img src="https://s3.eu-west-2.amazonaws.com/connecter/Logo_Design.png" style="width:50%">\n\
                     </div>\n\
                     <div class="w3-padding-64">\n\
                       <p>Welcome to Connecter, the website for all your prospective employee research needs.</p>\n'
@@ -87,8 +107,28 @@ def index(request):
         output += errormsg('No name was input to the field, please try again')
     output += '<p>Please enter the name of the prospective employee you would like to learn more about.</p>\n\
                         <form action="list_of_names" method="GET">\n\
-                             <input type="text" name="search" placeholder="Search..." requried maxlength=30 >\n\
-                            </form>\n\
+                            <input type="text" name="search" placeholder="Search..." requried maxlength=30 ><br>\n\
+                            <table class="center" border="1">\n\
+                                <tr>\n\
+                                    <th>\n\
+                                        <p>Gender</p>\n\
+                                        <form>\n\
+                                            <input type = "radio" name = "gender" value = "any" checked> Any <br>\n\
+                                            <input type = "radio" name = "gender" value = "male"> Male <br>\n\
+                                            <input type = "radio" name = "gender" value = "female"> Female<br>\n\
+                                        </form >\n\
+                                    </th>\n\
+                                    <th>\n\
+                                        <p>Minimum age</p>\n\
+                                        <input type="number" name="min_age" min="18">\n\
+                                    </th>\n\
+                                    <th>\n\
+                                        <p>Maximum age</p>\n\
+                                        <input type="number" name="max_age" min="18">\n\
+                                    </th>\n\
+                                </tr>\n\
+                            </table>\n\
+                            <input type="submit" value="Submit">\n\
                         </form>\n\
                     </div>\n\
                   </div>\n\
@@ -102,52 +142,73 @@ def list_of_names(request):
     empty_list = ''
     result_num = 0
     search_exp = request.GET.get('search')
+    gender = request.GET.get('gender')
 
-    if not search_exp:
-        #In case of empty search string, redirect to index page
-        output = '\
-            <!DOCTYPE html>\n\
-            <html lang="en">\n\
-                <head>\n\
-                    <meta http-equiv="refresh" content="0; URL=' + request.scheme + '://' + request.META.get('HTTP_HOST') + path +'?error=emptystring" />\n\
-                </head>\n\
-            </html>'
-        return HttpResponse(output)
+    max_age = getnum(request.GET, 'max_age')
+    min_age = getnum(request.GET, 'min_age')
 
-    #Main search logic starts here
     search_exp = search_exp[:30]
     search_words = search_exp.split()
     normal_search_words = [(strnorm(word)) for word in search_words]
-    fbresp_str = urllib.request.urlopen('https://graph.facebook.com/v2.11/me?fields=id%2Cname%2Cfriends%7Bfirst_name%2Clast_name%2Cid%7D&access_token=' + token).read()
+    fbresp_str = urllib.request.urlopen('https://graph.facebook.com/v2.5/me?fields=friends%7Bgender%2Cbirthday%2Cfirst_name%2Clast_name%7D&access_token=' + token).read()
     fbresp = json.loads(fbresp_str.decode('utf-8'))
     frdata = fbresp['friends']['data']
     results = ''
+
+    # Main search logic starts here
     for fr in frdata:
         nml = strnorm(fr['last_name'])
         nmf = strnorm(fr['first_name'])
-        matched = False
-        for qs in normal_search_words:
-            if nml.find(qs) > -1 or nmf.find(qs) > -1:
-                matched = True
-        if matched:
+
+        matched_name = False
+        if search_exp:
+            for qs in normal_search_words:
+                if nml.find(qs) > -1 or nmf.find(qs) > -1:
+                    matched_name = True
+        else:
+            matched_name = True
+
+        matched_gender = False
+        if gender != "any":
+            if 'gender' in fr:
+                fr_gender = fr['gender']
+                if fr_gender:
+                    if fr_gender == gender:
+                        matched_gender = True
+        else:
+            matched_gender = True
+
+        matched_age = False
+        if 'birthday' in fr:
+            age = getage(fr['birthday'])
+            if min_age:
+                if max_age:
+                    matched_age = min_age <= age <= max_age
+                else:
+                    matched_age = min_age < age
+            else:
+                if max_age:
+                    matched_age = age < max_age
+                else:
+                    matched_age = True
+
+        if matched_name and matched_age and matched_gender:
             results += '<a href="results?id=' + fr['id'] + '">' + fr['last_name'] + ', ' + fr['first_name'] + '<a><br>'
             result_num += 1
 
-    #Genetaring output
+    # Generating output
     output = pageheader() + pagetop()
     if result_num > 20:
         restriction =  '<form action="list_of_names" method="GET">\n\
                         <input type="text" name="search" placeholder="Restrict search..." requried maxlength=30 value="' + search_exp + '" >\n'
     if result_num == 0:
-        empty_list =   '<form action="list_of_names" method="GET">\n\
-                        <input type="text" name="search" placeholder="Search..." requried maxlength=30" >\n'
-
         output += '<div class="w3-row">\n\
                     <div class="w3-black w3-container w3-center" style="height:1080px">\n\
                         <div class="w3-padding-64">\n\
-                            <h1>There are no users matching your search, please try again</h1>\n' +\
-                            empty_list +\
-                        '</div>\n\
+                            <h1>There are no users matching your search, please try again</h1>\n\
+                            <form action="list_of_names" method="GET">\n\
+                            <input type="text" name="search" placeholder="Search..." requried maxlength=30" >\n\
+                        </div>\n\
                     </div>\n\
                 </div>'
     else:
@@ -159,7 +220,7 @@ def list_of_names(request):
                             '</div>\n\
                             <div class="w3-padding-64">\
                                 <p>Please Choose The User You Meant</p>\n' +\
-                             results +\
+                                results +\
                             '</div>\n\
                         </div>\n\
                     </div>'
@@ -168,7 +229,6 @@ def list_of_names(request):
 
 
 def results(request):
-    now = datetime.datetime.now()
     work = "N/A"
     results = "N/A"
     education = "N/A"
@@ -185,14 +245,11 @@ def results(request):
         output += errormsg('No user id was recieved, search again')
         return HttpResponse(output)
 
-
     picresp_str = urllib.request.urlopen('https://graph.facebook.com/v2.5/' + user_id + '/picture?height=200&width=200&redirect=false&access_token=' + token).read()
     picresp = json.loads(picresp_str)
     pic_url = picresp['data']['url']
     fbresp_str = urllib.request.urlopen('https://graph.facebook.com/v2.11/' + user_id + '?fields=birthday%2Cquotes%2Cname%2Ceducation%2Cemail%2Cwork%2Cabout%2Cfriends%2Clocation&access_token=' + token).read()
     fbresp = json.loads(fbresp_str.decode('utf-8'))
-
-
 
     if 'location' in fbresp:
         location = fbresp['location']['name']
@@ -208,8 +265,7 @@ def results(request):
     if 'birthday' in fbresp:
         age = ""
         dob = fbresp['birthday']
-        dob = datetime.datetime.strptime(datetime.datetime.strptime(dob, '%m/%d/%Y').strftime('%Y/%m/%d'), '%Y/%m/%d')
-        age = str(floor(((now - dob).days)/365))
+        age = getage(dob)
 
     if 'work' in fbresp:
         work = ""
@@ -257,7 +313,7 @@ def results(request):
         <td align="center" valign="top" style="background-color:black; color:white">\n\
             <div class="w3-padding-8">\n\
                 <p class="important_text">Age</p>\n' +\
-                    age +\
+                    str(age) +\
                     '<p class="important_text"><b>Location</b></p>\n' +\
                     location +\
                     '<p class="important_text"><b>Work</b></p>\n' +\
