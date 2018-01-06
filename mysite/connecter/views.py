@@ -7,7 +7,7 @@ import datetime
 from math import floor
 
 users = {'1':'Szilard','2':'Mariann','3':'Albert'}
-token = 'EAACEdEose0cBANVZBZCoBDNhYeGbJ83kxlZApelD1Xk2eHtDDgP4KzrZBhAP5RxvUiC2gopuwMcb1HZBY6omQwt8DyG8KDfgNHEZB02ucY0lk1LwAKE5uyfqftjeSdan1uWoDZBZBjIpIGrSYMRlOEbM06wp761LchyAIqN5CzBxytgn079CJofzLvgirAMSu6DplY2nee2ZAVQZDZD'
+token = 'EAACEdEose0cBAG52ZAkROZAhO6cJmrYSYubpvVSjtTm40EDenE1iA0wec0kxFRZA81YLnHfc8PaeMsV1M68loxslRZBGVqC6cPpBCZClMgwRwqJWfWeJvOpb0VMuebpdHRzKxZBX29ZCeINHDODT6kGmYgKyGWIIZBH1E28eMpcf5SpLsIQQK5sl50ILzLmTfcnoBU9aFkboKQZDZD'
 path = "/connecter/"
 
 def strnorm(inname):
@@ -79,7 +79,7 @@ def index(request):
                   <div class="w3-blue-grey w3-container w3-center" style="height:1080px">\n\
                     <div class="w3-padding-64">\n\
                       <h1>Connecter</h1>\n\
-                         <img src="https://lh4.googleusercontent.com/cj98H6b1RFwRJrjgK8tFm6WL3Ckbtq9nrblJ5G6b-l-_P2GCekMxsZYQ6WmNH_ay1il7TUyYuNwRVPaNFGcO=w1920-h949-rw" style="width:50%">\n\
+                         <img src="https://lh5.googleusercontent.com/VF_Wpri-watJ1sOLLIrVG2u2jScpNOLi7rrClE1OCSaRuvWjI2XfzLviO_fWmOrL-78O7M410bAdN-PPUfal=w1920-h949-rw" style="width:50%">\n\
                     </div>\n\
                     <div class="w3-padding-64">\n\
                       <p>Welcome to Connecter, the website for all your prospective employee research needs.</p>\n'
@@ -99,6 +99,7 @@ def index(request):
 
 def list_of_names(request):
     restriction = ''
+    empty_list = ''
     result_num = 0
     search_exp = request.GET.get('search')
 
@@ -135,20 +136,33 @@ def list_of_names(request):
     #Genetaring output
     output = pageheader() + pagetop()
     if result_num > 20:
-        restriction = '<form action="list_of_names" method="GET">\n\
-                             <input type="text" name="search" placeholder="Restrict search..." requried maxlength=30 value="' + search_exp + '" >\n'
-    output +=   '<div class="w3-row">\n\
+        restriction =  '<form action="list_of_names" method="GET">\n\
+                        <input type="text" name="search" placeholder="Restrict search..." requried maxlength=30 value="' + search_exp + '" >\n'
+    if result_num == 0:
+        empty_list =   '<form action="list_of_names" method="GET">\n\
+                        <input type="text" name="search" placeholder="Search..." requried maxlength=30" >\n'
+
+        output += '<div class="w3-row">\n\
                     <div class="w3-black w3-container w3-center" style="height:1080px">\n\
                         <div class="w3-padding-64">\n\
-                            <h1>You Searched For "' + search_exp + '"</h1>\n' +\
-                            restriction +\
-                        '</div>\n\
-                        <div class="w3-padding-64">\
-                            <p>Please Choose The User You Meant</p>\n' +\
-                         results +\
+                            <h1>There are no users matching your search, please try again</h1>\n' +\
+                            empty_list +\
                         '</div>\n\
                     </div>\n\
                 </div>'
+    else:
+        output +=   '<div class="w3-row">\n\
+                        <div class="w3-black w3-container w3-center" style="height:1080px">\n\
+                            <div class="w3-padding-64">\n\
+                                <h1>You Searched For "' + search_exp + '"</h1>\n' +\
+                                restriction +\
+                            '</div>\n\
+                            <div class="w3-padding-64">\
+                                <p>Please Choose The User You Meant</p>\n' +\
+                             results +\
+                            '</div>\n\
+                        </div>\n\
+                    </div>'
     output += pagefooter()
     return HttpResponse(output)
 
