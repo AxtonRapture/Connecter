@@ -7,7 +7,7 @@ import datetime
 from math import floor
 
 users = {'1':'Szilard','2':'Mariann','3':'Albert'}
-token = 'EAACEdEose0cBAI0mqrhGqV8PuXv39oc0DBBsOo3A9n6I88EzjdQGEL32JcRsV27pgSLxx4ZBPWdj3dQH8tITxcUfMLktDaXw3tYwV16S5M4AC5mzaEPXv9c0bxdePoswUco9ohbZCtbeMTubnKtKgVFZCkfVv3K65Rxb4yi9vEdtitjZCZBmUhQXP25Dyu93zD56xJLlSgAZDZD'
+token = 'EAACEdEose0cBANVZBZCoBDNhYeGbJ83kxlZApelD1Xk2eHtDDgP4KzrZBhAP5RxvUiC2gopuwMcb1HZBY6omQwt8DyG8KDfgNHEZB02ucY0lk1LwAKE5uyfqftjeSdan1uWoDZBZBjIpIGrSYMRlOEbM06wp761LchyAIqN5CzBxytgn079CJofzLvgirAMSu6DplY2nee2ZAVQZDZD'
 path = "/connecter/"
 
 def strnorm(inname):
@@ -22,8 +22,9 @@ def pageheader():
         <!DOCTYPE html>\n\
         <html lang="en">\n\
         <head>\n\
+            <link href="https://fonts.googleapis.com/css?family=Raleway|Roboto+Condensed|Ubuntu" rel="stylesheet">\n\
             <meta charset="UTF-8">\n\
-            <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">\n\
+            <link rel="shortcut icon" href="https://lh4.googleusercontent.com/I_ymSvUYuvWh-rROSsaoRY6NVdL8oCW0F9v_u-2fprB7Z7UPkzM1SalwaP5QTNP4HR4qy1346rMBhSt6m3TX=w1920-h949" type="image/x-icon">\n\
             <meta name="viewport" content="width=device-width, initial-scale=1">\n\
             <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">\n\
             <title>Connecter</title>\n\
@@ -44,6 +45,11 @@ def pageheader():
                 }\n\
                 input[type=text]:focus {\n\
                     width: 100%;\n\
+                }\n\
+                .important_text { \n\
+                    font-family: Raleway,sans-serif; \n\
+                    font-weight: bold;\n\
+                    font-size: 110%;\n\
                 }\n\
             </style>\n\
         </head>\n\
@@ -73,7 +79,7 @@ def index(request):
                   <div class="w3-blue-grey w3-container w3-center" style="height:1080px">\n\
                     <div class="w3-padding-64">\n\
                       <h1>Connecter</h1>\n\
-                         <img src="Logo_Design.jpg"  style="width:50%">\n\
+                         <img src="https://lh4.googleusercontent.com/cj98H6b1RFwRJrjgK8tFm6WL3Ckbtq9nrblJ5G6b-l-_P2GCekMxsZYQ6WmNH_ay1il7TUyYuNwRVPaNFGcO=w1920-h949-rw" style="width:50%">\n\
                     </div>\n\
                     <div class="w3-padding-64">\n\
                       <p>Welcome to Connecter, the website for all your prospective employee research needs.</p>\n'
@@ -149,9 +155,15 @@ def list_of_names(request):
 
 def results(request):
     now = datetime.datetime.now()
-    work = " "
-    education = " "
+    work = "N/A"
+    results = "N/A"
+    education = "N/A"
     location = "N/A"
+    email = "N/A"
+    age = "N/A"
+    name = "N/A"
+    quotes = "N/A"
+    about = "N/A"
     user_id = request.GET.get('id')
 
     if not user_id:
@@ -159,66 +171,92 @@ def results(request):
         output += errormsg('No user id was recieved, search again')
         return HttpResponse(output)
 
-    fbresp_str = urllib.request.urlopen('https://graph.facebook.com/v2.11/'+ user_id +'?fields=birthday%2Ceducation%2Cemail%2Cwork%2Cabout%2Cfriends%2Clocation&access_token=' + token).read()
+
+    picresp_str = urllib.request.urlopen('https://graph.facebook.com/v2.5/' + user_id + '/picture?height=200&width=200&redirect=false&access_token=' + token).read()
+    picresp = json.loads(picresp_str)
+    pic_url = picresp['data']['url']
+    fbresp_str = urllib.request.urlopen('https://graph.facebook.com/v2.11/' + user_id + '?fields=birthday%2Cquotes%2Cname%2Ceducation%2Cemail%2Cwork%2Cabout%2Cfriends%2Clocation&access_token=' + token).read()
     fbresp = json.loads(fbresp_str.decode('utf-8'))
 
 
-    if location in fbresp:
+
+    if 'location' in fbresp:
         location = fbresp['location']['name']
 
+    if 'about' in fbresp:
+        about = fbresp['about']
 
-    #TODO find out how about is stored
-    #about = fbresp['about']
-    #TODO Find age of user
-    dob = fbresp['birthday']
-    dob = datetime.datetime.strptime(datetime.datetime.strptime(dob, '%m/%d/%Y').strftime('%Y/%m/%d'), '%Y/%m/%d')
-    age = str(floor(((now - dob).days)/365))
-    for job in fbresp['work']:
-        employer = job['employer']
-        job_location = job['location']
-        if employer:
-            work += employer['name']
-            if job_location:
-                work += ' (' + job_location['name'] + ')'
-            work += '<br>'
-    for edu in fbresp['education']:
-        school = edu['school']
-        if school:
-            education += school['name'] + '<br>'
-    frdata = fbresp['friends']['data']
-    results = ''
-    for fr in frdata:
-            results += '<a href="results?id=' + fr['id'] + '">' + fr['name'] + ', ' + '<a><br>'
+    if 'quotes' in fbresp:
+        quotes = fbresp['quotes']
+
+    if 'email' in fbresp:
+        email = fbresp['email']
+    if 'birthday' in fbresp:
+        age = ""
+        dob = fbresp['birthday']
+        dob = datetime.datetime.strptime(datetime.datetime.strptime(dob, '%m/%d/%Y').strftime('%Y/%m/%d'), '%Y/%m/%d')
+        age = str(floor(((now - dob).days)/365))
+
+    if 'work' in fbresp:
+        work = ""
+        for job in fbresp['work']:
+            employer = job['employer']
+            job_location = job['location']
+            if employer:
+                work += employer['name']
+                if job_location:
+                    work += ' (' + job_location['name'] + ')'
+                work += '<br>'\
+
+    if 'education' in fbresp:
+        education = ""
+        for edu in fbresp['education']:
+            school = edu['school']
+            if school:
+                education += school['name'] + '<br>'
+
+    if 'friends' in fbresp:
+        results = ""
+        frdata = fbresp['friends']['data']
+        for fr in frdata:
+                results += '<a href="results?id=' + fr['id'] + '">' + fr['name'] +  '<a><br>'
+
+    if 'name' in fbresp:
+        name = fbresp['name']
 
     output = pageheader() + pagetop()
     output += '<table width=1300 style="border-spacing: 0px;"><tr>\n\
-                    <td align="center" valign="top" style="background-color:black; color:white">\n\
-                        <div class="w3-padding-64">\n\
-                            <h1>Name of Person</h1>\n\
-                        </div>\n\
-                        <div class="w3-padding-64">\n\
-                            <p><b>Age</b></p>\n' +\
-                            age +\
-                            '<p><b>Location</b></p>\n' +\
-                            location +\
-                            '<p><b>Work</b></p>\n' +\
-                            work + \
-                            '<p><b>Education</b></p>\n' + \
-                            education + \
-                            '<p><b>Friends</b></p>\n'+\
-                            results +\
-                        '</div>\n\
-                    </td>\n\
-                    <td align="center" valign="top" style="background-color:#607d8b; color:white">\n\
-                        <div class="w3-padding-64 w3-center">\n\
-                            <h1>Placeholder</h1>\n\
-                            <img src="Image Placeholder.jpg"  style="width:50%">\n\
-                            <div class="w3-left-align w3-padding-large">\n\
-                                <p>Lorem ipusm sed vitae justo condimentum, porta lectus vitae, ultricies congue gravida diam non fringilla.</p>\n\
-                                <p>Lorem ipusm sed vitae justo condimentum, porta lectus vitae, ultricies congue gravida diam non fringilla.</p>\n\
-                            </div>\n\
-                        </div>\n\
-                    </td>\n\
-                </tr></table>'
+        <td width="30%" align="center" valign="top" style="background-color:#607d8b; color:white">\n\
+            <div class="w3-padding-64 w3-center">\n\
+                <div style="font-family:Raleway,sans-serif; font-size:30px">\n' +\
+                    name + \
+                '</div>\n\
+                    <img src="' + pic_url + '">\n\
+                    <div class="w3-left-align w3-padding-large">\n\
+                        <p class="important_text"><b>About</b></p>\n' + \
+                        about + \
+                        '<p class="important_text"><b>Favorite Quotes</b></p>\n' + \
+                        quotes + \
+                    '</div>\n\
+            </div>\n\
+        </td>\n\
+        <td align="center" valign="top" style="background-color:black; color:white">\n\
+            <div class="w3-padding-8">\n\
+                <p class="important_text">Age</p>\n' +\
+                    age +\
+                    '<p class="important_text"><b>Location</b></p>\n' +\
+                    location +\
+                    '<p class="important_text"><b>Work</b></p>\n' +\
+                    work + \
+                    '<p class="important_text"><b>Education</b></p>\n' + \
+                    education + \
+                    '<p class="important_text"><b>E-mail</b></p>\n' + \
+                    email + \
+                    '<p class="important_text"><b>Friends</b></p>\n'+\
+                    results +\
+            '</div>\n\
+        </td>\n\
+        </tr></table>'
+
     output += pagefooter()
     return HttpResponse(output)
