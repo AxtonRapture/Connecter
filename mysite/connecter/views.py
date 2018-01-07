@@ -6,8 +6,9 @@ import unidecode
 import datetime
 from math import floor
 
-token = 'EAACEdEose0cBAO1W9oujl1ZBZCPnnYthqd2O0Q6wdLObeiYPSpgLZC9Pb9nCqTPqgZCT8uU2ejbQ2zDYN6ZCbDhJbf7ZBZAxlSYTLJiICU1wKZBHH5gBGQ1srZC444pIdo8GmnZBVlzU8hsbcZCMsVu1Td3kxPy3rNj2ZCT0UySZAZB34Os23C3W50i8NdJmfZAbLPe8kOiadQ5vAYZB0wZDZD'
+token = 'EAACEdEose0cBAGZC66LRbFLJFjwrd2ky2DXw46UzhZCwceZBBjCjGGrnB3WwiSrClft5l11z1Qa4V8kcVBywHoFuztvFxZCfc9HD3qbTw1UZBPVjbhNcZBhNRrxeQEYHWGNQq1dciKZBLtndNhcZBCWgVRnWsrspF6DeWuGZA46toBYBfNZAS19lhTEFzN2O0ZAZBJpX4VgbYrIOLQZDZD'
 path = "/connecter/"
+bookmark_dict = {}
 
 def strnorm(inname):
     outname = unidecode.unidecode(inname.lower())
@@ -93,8 +94,33 @@ def pagefooter():
 
 
 def index(request):
+    any_checked = ''
+    male_checked = ''
+    female_checked = ''
+
     error = request.GET.get("error")
     output = pageheader()
+    gender = request.GET.get('gender')
+    max_age = request.GET.get('max_age')
+    min_age = request.GET.get('min_age')
+
+    if not gender or gender == 'any':
+        any_checked = 'checked'
+    else:
+        if gender == 'male':
+            male_checked = 'checked'
+        else:
+            female_checked = 'checked'
+    if max_age:
+        max_age = str(max_age)
+    else:
+        max_age = ''
+
+    if min_age:
+        min_age = str(min_age)
+    else:
+        min_age = ''
+
     output += '<div class="w3-row">\n\
                   <div class="w3-blue-grey w3-container w3-center" style="height:1080px">\n\
                     <div class="w3-padding-64">\n\
@@ -113,23 +139,24 @@ def index(request):
                                     <th>\n\
                                         <p>Gender</p>\n\
                                         <form>\n\
-                                            <input type = "radio" name = "gender" value = "any" checked> Any <br>\n\
-                                            <input type = "radio" name = "gender" value = "male"> Male <br>\n\
-                                            <input type = "radio" name = "gender" value = "female"> Female<br>\n\
+                                            <input type = "radio" name = "gender" value = "any" ' + any_checked +'> Any <br>\n\
+                                            <input type = "radio" name = "gender" value = "male" ' + male_checked +'> Male <br>\n\
+                                            <input type = "radio" name = "gender" value = "female" ' + female_checked +'> Female<br>\n\
                                         </form >\n\
                                     </th>\n\
                                     <th>\n\
                                         <p>Minimum age</p>\n\
-                                        <input type="number" name="min_age" min="18">\n\
+                                        <input type="number" name="min_age" min="18" value="' + min_age + '">\n\
                                     </th>\n\
                                     <th>\n\
                                         <p>Maximum age</p>\n\
-                                        <input type="number" name="max_age" min="18">\n\
+                                        <input type="number" name="max_age" min="18" value="' + max_age + '">\n\
                                     </th>\n\
                                 </tr>\n\
                             </table>\n\
                             <input type="submit" value="Submit">\n\
                         </form>\n\
+                        <p><a href = "' + path + 'bookmarks">Bookmarks</a></p>\n\
                     </div>\n\
                   </div>\n\
                 </div>\n'
@@ -153,6 +180,7 @@ def list_of_names(request):
     fbresp_str = urllib.request.urlopen('https://graph.facebook.com/v2.5/me?fields=friends%7Bgender%2Cbirthday%2Cfirst_name%2Clast_name%7D&access_token=' + token).read()
     fbresp = json.loads(fbresp_str.decode('utf-8'))
     frdata = fbresp['friends']['data']
+    search_return = '<a href="' + path + '?search='+ search_exp + '&gender=' + gender + '&min_age=' + str(min_age) + '&max_age=' + str(max_age) + '">Return to Index Page</a>'
     results = ''
 
     # Main search logic starts here
@@ -199,23 +227,22 @@ def list_of_names(request):
     # Generating output
     output = pageheader() + pagetop()
     if result_num > 20:
-        restriction =  '<form action="list_of_names" method="GET">\n\
-                        <input type="text" name="search" placeholder="Restrict search..." requried maxlength=30 value="' + search_exp + '" >\n'
+        restriction =  '<p>Your returned list is over 20 individuals long, please click on the link to refine your search</p>\n\
+                        ' + search_return
     if result_num == 0:
         output += '<div class="w3-row">\n\
                     <div class="w3-black w3-container w3-center" style="height:1080px">\n\
                         <div class="w3-padding-64">\n\
-                            <h1>There are no users matching your search, please try again</h1>\n\
-                            <form action="list_of_names" method="GET">\n\
-                            <input type="text" name="search" placeholder="Search..." requried maxlength=30" >\n\
-                        </div>\n\
+                            <h1>There are no users matching your search, please try again</h1>\n ' +\
+                        search_return +\
+                        '</div>\n\
                     </div>\n\
                 </div>'
     else:
         output +=   '<div class="w3-row">\n\
                         <div class="w3-black w3-container w3-center" style="height:1080px">\n\
                             <div class="w3-padding-64">\n\
-                                <h1>You Searched For "' + search_exp + '"</h1>\n' +\
+                                <h1>Search Results</h1>\n' +\
                                 restriction +\
                             '</div>\n\
                             <div class="w3-padding-64">\
@@ -294,6 +321,11 @@ def results(request):
     if 'name' in fbresp:
         name = fbresp['name']
 
+    if user_id in bookmark_dict:
+        action = '<a href="bookmarks?key=' + user_id + '">Unbookmark profile</a>'
+    else:
+        action = '<a href="bookmarks?id=' + user_id + '&name=' + name + '&action=' + 'unbookmark' + '">Bookmark profile</a>'
+
     output = pageheader() + pagetop()
     output += '<table width=1300 style="border-spacing: 0px;"><tr>\n\
         <td width="30%" align="center" valign="top" style="background-color:#607d8b; color:white">\n\
@@ -307,7 +339,8 @@ def results(request):
                         about + \
                         '<p class="important_text"><b>Favorite Quotes</b></p>\n' + \
                         quotes + \
-                    '</div>\n\
+                        '<br><br>' + action +'\n\
+                    </div>\n\
             </div>\n\
         </td>\n\
         <td align="center" valign="top" style="background-color:black; color:white">\n\
@@ -329,4 +362,38 @@ def results(request):
         </tr></table>'
 
     output += pagefooter()
+    return HttpResponse(output)
+
+def bookmarks(request):
+    output = pageheader() + pagetop()
+    results = "You have no bookmarked individuals"
+    key = request.GET.get('key')
+    if key and key in bookmark_dict:
+        del bookmark_dict[key]
+    bookmark_name = ""
+    bookmark_id = ""
+    name = request.GET.get('name')
+    id = request.GET.get('id')
+    if name:
+        bookmark_name = name
+    if id:
+        bookmark_id = id
+    if name and id:
+        bookmark_dict[bookmark_id] = bookmark_name
+    if bool(bookmark_dict) == True:
+        results = ""
+        for bookmark in bookmark_dict.keys():
+            results += '<a href="results?id=' + bookmark + '">' +  str(bookmark_dict[bookmark]) +'<a>\
+            <a href="bookmarks?key=' + bookmark + '">X<a><br>'
+
+
+    output += ' <div class="w3-row">\n\
+                    <div class="w3-black w3-container w3-center" style="height:1080px">\n\
+                        <div class="w3-padding-64">\n\
+                            <h1>Your bookmarks</h1><br><br>\n' + \
+                            results + \
+                        '</div>\n\
+                    </div>\n\
+                </div>'
+
     return HttpResponse(output)
